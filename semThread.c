@@ -1,11 +1,12 @@
 #include <stdio.h>
 
 typedef struct {
-    int *matriz;
-    int num;
-} matriz;
+    int nLinhas;
+    int *matriz[nLinhas][nLinhas]; //como definir o numero de linhas/colunas?
+    int qtdThreads;
+} matriz; //o nome do objeto do struct pode ser igual a um de seus atributos?
 
-void AlocarDinamicamente(){
+void AlocarDinamicamente(){ //n faço ideia d como coloca a matriz como parametro
     //alocar matrizes
 
 }
@@ -27,8 +28,7 @@ void FecharArquivo(FILE *arq[]){
     }
 }
 
-void CopiarParaVetor(){
-    //fazer a copia no vetor
+void CopiarParaVetor(FILE *arq[], int matriz[][]){ //arrumar vetor
 }
 
 
@@ -36,20 +36,20 @@ int main(int argc, char *argv[]) {
     int num = 4; //ARRUMAR!!!! // numero de threads
     int reducao;
     float tempoSoma, tempoTotal, tempoRedução, tempoMulti;
-    //FILE *arq[] = {"arqMatrizA.txt", "arqMatrizB.txt", "arqMatrizC.txt"}; // ?? não sei como fazer
     FILE *arq[3];
 
-
     //alocação em 1 etapa
-    AlocarDinamicamente();
+    AlocarDinamicamente(); //como q passa um atrubuto de struct como parametro 
 
+    /* isso faz a msm coisa q o copiarParaVetor(), n?
     for (int i = 0; i < 2; i++) {
         leitura(arq[i]);
     }
-
+    */
+  
     //passo 1 
     AbrirArquivo(arq, &argv[1]);
-    CopiarParaVetor();
+    CopiarParaVetor(arq, matriz[][]); //d nv cm q passa um atrubuto de struct como parametro ??
 
     
     //passo 2
@@ -73,5 +73,4 @@ int main(int argc, char *argv[]) {
     printf("Tempo total: %.3f segundos.\n", tempoTotal);
 
     return 0;
-    
 }
