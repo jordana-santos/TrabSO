@@ -1,23 +1,29 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct {
     int nLinhas;
-    int *matriz[nLinhas][nLinhas]; //como definir o numero de linhas/colunas?
+    int *matriz; //como definir o numero de linhas/colunas?
     int qtdThreads;
-} matriz; //o nome do objeto do struct pode ser igual a um de seus atributos?
+} Matriz; 
 
-void AlocarDinamicamente(){ //n faço ideia d como coloca a matriz como parametro
-    //alocar matrizes
+void AlocarDinamicamente(FILE *arq[], Matriz mtz){ //REVIEW: isso funciona pra tds as matrizes?
+     mtz.matriz = (Matriz *) malloc(mtz.nLinhas * mtz.nLinhas * sizeof(Matriz));
 
 }
 
-void AbrirArquivo(FILE *arq[], char *nomesArq[]){
-    for (int i = 0; i < 3; i++){
-        arq[i] = fopen(nomesArq[i], "r"); 
-        if(arq[i] == NULL)
+void AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){ 
+    for (int i = 0; i < nArq; i++){
+        arq[i] = fopen(nomesArq[i+3], "r"); 
+        if(arq[i] == NULL){
             printf("Erro ao abrir o arquivo %s \n", nomesArq[i]);
+            for (int j = 0; j < i; j++){ //fecha arq ja abertos e libera recursos
+                fclose(arq[j]); 
+            }
+            return 1;
+        }
         else 
-            printf("Arquivo %s aberto com sucesso \n", nomesArq[i]); //flag de teste apenas pra verificar se ta abrindo os arq
+            printf("Arquivo %s aberto com sucesso \n", nomesArq[i]); //FIXME: flag de teste apenas pra verificar se ta abrindo os arq
     }
 }
 
@@ -28,28 +34,32 @@ void FecharArquivo(FILE *arq[]){
     }
 }
 
-void CopiarParaVetor(FILE *arq[], int matriz[][]){ //arrumar vetor
+void CopiarParaVetor(FILE *arq[], Matriz mtz){ //arrumar vetor
+
 }
 
 
 int main(int argc, char *argv[]) {
-    int num = 4; //ARRUMAR!!!! // numero de threads
-    int reducao;
+    if (argc < 4){
+        printf("Quantidade de argumentos invalida\n");
+        return 1;
+    }
+
+    Matriz mtz; //instancia da struct Matriz
+
+    int nThreads = atoi(argv[1]); 
+    mtz.nLinhas = atoi(argv[2]); 
+    int reducao; 
     float tempoSoma, tempoTotal, tempoRedução, tempoMulti;
-    FILE *arq[3];
+    int nArq = argc - 3; 
+    FILE *arq[nArq];  //lista de arquivos
 
     //alocação em 1 etapa
-    AlocarDinamicamente(); //como q passa um atrubuto de struct como parametro 
-
-    /* isso faz a msm coisa q o copiarParaVetor(), n?
-    for (int i = 0; i < 2; i++) {
-        leitura(arq[i]);
-    }
-    */
+    AlocarDinamicamente(arq, mtz); //como q passa um atrubuto de struct como parametro 
   
     //passo 1 
-    AbrirArquivo(arq, &argv[1]);
-    CopiarParaVetor(arq, matriz[][]); //d nv cm q passa um atrubuto de struct como parametro ??
+    AbrirArquivo(arq, nArq, &argv);
+    CopiarParaVetor(arq, mtz); 
 
     
     //passo 2
