@@ -2,22 +2,26 @@
 #include <stdlib.h>
 
 typedef struct {
-    int matriz; //como definir o numero de linhas/colunas?
+    int **matriz;
     int nThread;
     int nLinhas;
 } Matriz; 
 
-Matriz AlocarDinamicamente(FILE *arq[], char *argv[], Matriz mtz){ //todo: copiar a matriz pra um vetor (olha o exemplo.c)
-    mtz.matriz = (Matriz *) malloc(mtz.nLinhas * mtz.nLinhas * sizeof(Matriz));
+Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){ 
     mtz.nThread = atoi(argv[1]); 
     mtz.nLinhas = atoi(argv[2]);
+    mtz.matriz = (int *)malloc(mtz.nLinhas * mtz.nLinhas * sizeof(int));
 
-
-
-    return mtz; //review: precisa de ponteiro ou isso ja eh suficiente?
+    for (int i = 0; i < mtz.nLinhas; i++){
+        for (int j = 0; j < mtz.nLinhas; j++) {
+            fscanf(arq, "%d", &mtz.matriz[i][j]);
+        }
+    }
+    
+    return mtz; 
 }
 
-void AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){ //review: isso abre todos os arq?
+int AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){ 
     for (int i = 0; i < nArq; i++){
         arq[i] = fopen(nomesArq[i+3], "r"); 
         if(arq[i] == NULL){
@@ -27,9 +31,10 @@ void AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){ //review: isso abre 
             return 1;
         }
         else 
-            printf("Arquivo %s aberto com sucesso \n", nomesArq[i]); //fixme: tirar dps. flag de teste apenas pra verificar se ta abrindo
+            printf("Arquivo %s aberto com sucesso \n", nomesArq[i+3]); //fixme: tirar dps. flag de teste apenas pra verificar se ta abrindo
     }
-}
+    return 1;
+} 
 
 void FecharArquivo(FILE *arq[], int numArq){
     for (int i = 0; i < numArq; i++){
@@ -45,20 +50,21 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    Matriz mtzA, mtzB, mtzC; //instancias da struct Matriz
-    int reducao; 
-    float tempoSoma, tempoTotal, tempoRedução, tempoMulti;
+    Matriz mtzA, mtzB, mtzC, mtzD, mtzE; //instancias da struct Matriz
+    //int reducao; 
+    //float tempoSoma, tempoTotal, tempoRedução, tempoMulti;
     int nArq = argc - 3; 
     FILE *arq[nArq];  //lista de arquivos
-
-    //alocação em 1 etapa
-    //review: isso conta como alocacao em 1 etapa?
-    AlocarDinamicamente(arq, &argv, mtzA);
-    AlocarDinamicamente(arq, &argv, mtzB);  
-    AlocarDinamicamente(arq, &argv, mtzC);
   
     //passo 1 
-    AbrirArquivo(arq, nArq, &argv);
+    AbrirArquivo(arq, nArq, argv);
+
+    //alocação em 1 etapa
+    AlocarDinamicamente(arq[0], argv, mtzA);
+    AlocarDinamicamente(arq[1], argv, mtzB);  
+    AlocarDinamicamente(arq[2], argv, mtzC);
+    AlocarDinamicamente(arq[3], argv, mtzD);
+    AlocarDinamicamente(arq[4], argv, mtzE);
     
     //passo 2
     //T threads do tipo processamento
@@ -72,13 +78,24 @@ int main(int argc, char *argv[]) {
     //passo 6 e 7
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
-    FecharArquivo(arq, nArq);
     //saidas
+    /*
     printf("Redução: %d\n", reducao);
     printf("Tempo soma: %.3f segundos.\n", tempoSoma);
     printf("Tempo multiplicação: %.3f segundos.\n", tempoMulti);
     printf("Tempo redução: %.3f segundos.\n", tempoRedução);
     printf("Tempo total: %.3f segundos.\n", tempoTotal);
+    */
+    
+
+    //liberação de memória
+    //fixme: ta dando um warning nos mtz aq ('mtzA.matriz' may be used uninitialized in this function)
+    FecharArquivo(arq, nArq);
+    free(mtzA.matriz);
+    free(mtzB.matriz);
+    free(mtzC.matriz);
+    free(mtzD.matriz);
+    free(mtzE.matriz);
 
     return 0;
 }
