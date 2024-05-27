@@ -11,7 +11,7 @@ Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){
     mtz.nThread = atoi(argv[1]); 
     mtz.nLinhas = atoi(argv[2]);
     //ta dando um warning em mtz.matriz (assignment to 'int **' from incompatible pointer type 'int *')
-    mtz.matriz = (int *)malloc(mtz.nLinhas * mtz.nLinhas * sizeof(int));
+    mtz.matriz = (int **)malloc(mtz.nLinhas * mtz.nLinhas * sizeof(int));
 
     for (int i = 0; i < mtz.nLinhas; i++){
         for (int j = 0; j < mtz.nLinhas; j++) {
@@ -55,7 +55,7 @@ Matriz somaMatriz(Matriz mtzA, Matriz mtzB, Matriz mtzD){
     return mtzD;
 }
 
-void gravaMatriz(FILE *arq[], Matriz mtz){
+void gravaMatriz(FILE arq[], Matriz mtz){
     for (int i = 0; i < mtz.nLinhas; i++){
         for (int j = 0; j < mtz.nLinhas; j++){
             fprintf(arq, "%d ", mtz.matriz[i][j]);
@@ -76,6 +76,16 @@ Matriz multiplicaMatriz(Matriz mtzC, Matriz mtzD, Matriz mtzE){
     return mtzE;
 }
 
+int reduzMatriz(Matriz mtz){
+    int reducao = 0;
+    for (int i = 0; i < mtz.nLinhas; i++) {
+        for (int j = 0; j < mtz.nLinhas; i++) {
+            reducao += mtz.matriz[i][j];
+        }
+    }
+    return reducao;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 4){
         printf("Quantidade de argumentos invalida\n");
@@ -91,12 +101,9 @@ int main(int argc, char *argv[]) {
     //passo 1 : leitura das matrizes A e B
     AbrirArquivo(arq, nArq, argv);
 
-    AlocarDinamicamente(arq[0], argv, mtzA);
-    AlocarDinamicamente(arq[1], argv, mtzB);  
-    AlocarDinamicamente(arq[3], argv, mtzD);
-    
-    
-    AlocarDinamicamente(arq[4], argv, mtzE);
+    mtzA = AlocarDinamicamente(arq[0], argv, mtzA);
+    mtzB = AlocarDinamicamente(arq[1], argv, mtzB);  
+    mtzD = AlocarDinamicamente(arq[3], argv, mtzD);
     
     //passo 2 : soma das matrizes A e B
     somaMatriz(mtzA, mtzB, mtzD);
@@ -107,10 +114,11 @@ int main(int argc, char *argv[]) {
     //1 thread do tipo escrita e 1 thread do tipo leitura
 
     //passo 4 : Leitura da matriz C
-    AlocarDinamicamente(arq[2], argv, mtzC);
+    mtzC = AlocarDinamicamente(arq[2], argv, mtzC);
     //1 thread do tipo escrita e 1 thread do tipo leitura
     
     //passo 5 : multiplicacao das matrizes C e D
+    mtzE = AlocarDinamicamente(arq[4], argv, mtzE);
     multiplicaMatriz(mtzC, mtzD, mtzE);
     //T threads do tipo processamento
     
@@ -119,7 +127,7 @@ int main(int argc, char *argv[]) {
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
     //passo 7 : Reducao da matriz E e saida do valo na tela
-    
+    reducao = reduzMatriz(mtzE);
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
     //saidas
@@ -131,7 +139,6 @@ int main(int argc, char *argv[]) {
     
 
     //liberação de memória
-    //fixme: ta dando um warning nos mtz aq ('mtzA.matriz' may be used uninitialized in this function)
     FecharArquivo(arq, nArq);
     free(mtzA.matriz);
     free(mtzB.matriz);
