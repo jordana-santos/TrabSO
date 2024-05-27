@@ -10,6 +10,7 @@ typedef struct {
 Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){ 
     mtz.nThread = atoi(argv[1]); 
     mtz.nLinhas = atoi(argv[2]);
+    //ta dando um warning em mtz.matriz (assignment to 'int **' from incompatible pointer type 'int *')
     mtz.matriz = (int *)malloc(mtz.nLinhas * mtz.nLinhas * sizeof(int));
 
     for (int i = 0; i < mtz.nLinhas; i++){
@@ -23,7 +24,7 @@ Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){
 
 int AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){ 
     for (int i = 0; i < nArq; i++){
-        arq[i] = fopen(nomesArq[i+3], "r"); 
+        arq[i] = fopen(nomesArq[i+3], "r+"); 
         if(arq[i] == NULL){
             printf("Erro ao abrir o arquivo %s \n", nomesArq[i]);
             for (int j = 0; j < i; j++) //fecha arq ja abertos e libera recursos
@@ -43,6 +44,37 @@ void FecharArquivo(FILE *arq[], int numArq){
     }
 }
 
+Matriz somaMatriz(Matriz mtzA, Matriz mtzB, Matriz mtzD){
+    int soma;
+    for (int i = 0; i < mtzA.nLinhas; i++){
+        for (int j = 0; j < mtzA.nLinhas; j++){
+            soma = mtzA.matriz[i][j] + mtzB.matriz[i][j];
+            mtzD.matriz[i][j] = soma;
+        }
+    }
+    return mtzD;
+}
+
+void gravaMatriz(FILE *arq[], Matriz mtz){
+    for (int i = 0; i < mtz.nLinhas; i++){
+        for (int j = 0; j < mtz.nLinhas; j++){
+            fprintf(arq, "%d ", mtz.matriz[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+Matriz multiplicaMatriz(Matriz mtzC, Matriz mtzD, Matriz mtzE){
+    int n = mtzC.nLinhas;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < n; k++) {
+                mtzE.matriz[i][j] += mtzC.matriz[i][k] * mtzD.matriz[k][j];
+            }
+        }
+    }
+    return mtzE;
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 4){
@@ -51,41 +83,51 @@ int main(int argc, char *argv[]) {
     }
 
     Matriz mtzA, mtzB, mtzC, mtzD, mtzE; //instancias da struct Matriz
-    //int reducao; 
-    //float tempoSoma, tempoTotal, tempoRedução, tempoMulti;
+    int reducao; 
+    float tempoSoma, tempoTotal, tempoReducao, tempoMulti;
     int nArq = argc - 3; 
     FILE *arq[nArq];  //lista de arquivos
   
-    //passo 1 
+    //passo 1 : leitura das matrizes A e B
     AbrirArquivo(arq, nArq, argv);
 
-    //alocação em 1 etapa
     AlocarDinamicamente(arq[0], argv, mtzA);
     AlocarDinamicamente(arq[1], argv, mtzB);  
-    AlocarDinamicamente(arq[2], argv, mtzC);
     AlocarDinamicamente(arq[3], argv, mtzD);
+    
+    
     AlocarDinamicamente(arq[4], argv, mtzE);
     
-    //passo 2
+    //passo 2 : soma das matrizes A e B
+    somaMatriz(mtzA, mtzB, mtzD);
     //T threads do tipo processamento
     
-    //passo 3 e 4
+    //passo 3: Gravacao da martriz D
+    gravaMatriz(arq[3], mtzD);
+    //1 thread do tipo escrita e 1 thread do tipo leitura
+
+    //passo 4 : Leitura da matriz C
+    AlocarDinamicamente(arq[2], argv, mtzC);
     //1 thread do tipo escrita e 1 thread do tipo leitura
     
-    //passo 5
+    //passo 5 : multiplicacao das matrizes C e D
+    multiplicaMatriz(mtzC, mtzD, mtzE);
     //T threads do tipo processamento
     
-    //passo 6 e 7
+    //passo 6 : gravacao da matriz E
+    gravaMatriz(arq[4], mtzE);
+    //1 thread do tipo escrita e 1 thread do tipo processamento
+
+    //passo 7 : Reducao da matriz E e saida do valo na tela
+    
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
     //saidas
-    /*
     printf("Redução: %d\n", reducao);
     printf("Tempo soma: %.3f segundos.\n", tempoSoma);
     printf("Tempo multiplicação: %.3f segundos.\n", tempoMulti);
-    printf("Tempo redução: %.3f segundos.\n", tempoRedução);
+    printf("Tempo redução: %.3f segundos.\n", tempoReducao);
     printf("Tempo total: %.3f segundos.\n", tempoTotal);
-    */
     
 
     //liberação de memória
