@@ -1,21 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <pthread.h>
-
-pthread_t idPrincipal;
-pthread_t outrosId[]; //precisa ser uma lista com a quantidade de threads
 
 typedef struct {
     int **matriz;
-    int nThread;
     int nLinhas;
+    int tipoCalculo; //1:soma, 2:multiplicacao, 3:reducao
 } Matriz; 
 
-Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){ 
-    mtz.nThread = atoi(argv[1]); 
+Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){  
     mtz.nLinhas = atoi(argv[2]);
-    //ta dando um warning em mtz.matriz (assignment to 'int **' from incompatible pointer type 'int *')
     mtz.matriz = (int **)malloc(mtz.nLinhas * mtz.nLinhas * sizeof(int));
 
     for (int i = 0; i < mtz.nLinhas; i++){
@@ -23,7 +17,6 @@ Matriz AlocarDinamicamente(FILE *arq, char *argv[], Matriz mtz){
             fscanf(arq, "%d", &mtz.matriz[i][j]);
         }
     }
-    
     return mtz; 
 }
 
@@ -36,8 +29,6 @@ int AbrirArquivo(FILE *arq[], int nArq, char *nomesArq[]){
                 fclose(arq[j]); 
             return 1;
         }
-        else 
-            printf("Arquivo %s aberto com sucesso \n", nomesArq[i+3]); //fixme: tirar dps. flag de teste apenas pra verificar se ta abrindo
     }
     return 1;
 } 
@@ -49,15 +40,16 @@ void FecharArquivo(FILE *arq[], int numArq){
     }
 }
 
-Matriz somaMatriz(Matriz mtzA, Matriz mtzB, Matriz mtzD){
+void somaMatriz(Matriz* mtz[]){
+    //0: mtzA, 1:mtzB, 3:mtzD
     int soma;
-    for (int i = 0; i < mtzA.nLinhas; i++){
-        for (int j = 0; j < mtzA.nLinhas; j++){
-            soma = mtzA.matriz[i][j] + mtzB.matriz[i][j];
-            mtzD.matriz[i][j] = soma;
+    for (int i = 0; i < mtz[0]->nLinhas; i++){
+        for (int j = 0; j < mtz[0]->nLinhas; j++){
+            soma = mtz[0]->matriz[i][j] + mtz[1]->matriz[i][j];
+            mtz[3]->matriz[i][j] = soma;
         }
     }
-    return mtzD;
+    //return *mtz[3];
 }
 
 void gravaMatriz(FILE arq[], Matriz mtz){
@@ -69,26 +61,40 @@ void gravaMatriz(FILE arq[], Matriz mtz){
     }
 }
 
-Matriz multiplicaMatriz(Matriz mtzC, Matriz mtzD, Matriz mtzE){
-    int n = mtzC.nLinhas;
+void multiplicaMatriz(Matriz* mtz[]){
+    //2:mtzC, 3:mtzD, 4:mtzE
+    int n = mtz[2]->nLinhas;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             for (int k = 0; k < n; k++) {
-                mtzE.matriz[i][j] += mtzC.matriz[i][k] * mtzD.matriz[k][j];
+                mtz[4]->matriz[i][j] += mtz[2]->matriz[i][k] * mtz[3]->matriz[k][j];
             }
         }
     }
-    return mtzE;
+    //return mtz[4];
 }
 
-int reduzMatriz(Matriz mtz){
+int reduzMatriz(Matriz* mtz){
     int reducao = 0;
-    for (int i = 0; i < mtz.nLinhas; i++) {
-        for (int j = 0; j < mtz.nLinhas; i++) {
-            reducao += mtz.matriz[i][j];
+    for (int i = 0; i < mtz->nLinhas; i++) {
+        for (int j = 0; j < mtz->nLinhas; i++) {
+            reducao += mtz->matriz[i][j];
         }
     }
     return reducao;
+}
+
+void *treadProcessamento(void *matriz){
+    pthread_t id = pthread_self();
+    Matriz *mtz = (Matriz*)matriz; 
+    if (mtz->tipoCalculo == 1)
+        somaMatriz(mtz);
+    else if (mtz->tipoCalculo == 2)
+        multiplicaMatriz(mtz);
+    else 
+        reduzMatriz(mtz);
+
+    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[]) {
@@ -97,9 +103,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    idPrincipal = pthread_self(); //captura id da thread principal
-
-    Matriz mtzA, mtzB, mtzC, mtzD, mtzE; //instancias da struct Matriz
+    int qntThreads = atoi(argv[1]);
+    pthread_t idPrincipal = pthread_self(); //captura id da thread principal
+    pthread_t outrosId[qntThreads]; 
+    
+    Matriz *matrizes[5]; //instancias da struct Matriz 
+    //0:mtzA, 1:mtzB, 2:mtzC, 3:mtzD, 4:mtzE
+    int rc; //review
     int reducao; 
     float tempoSoma, tempoTotal, tempoReducao, tempoMulti;
     int nArq = argc - 3; 
@@ -108,33 +118,35 @@ int main(int argc, char *argv[]) {
     //passo 1 : leitura das matrizes A e B
     AbrirArquivo(arq, nArq, argv);
 
-    mtzA = AlocarDinamicamente(arq[0], argv, mtzA);
-    mtzB = AlocarDinamicamente(arq[1], argv, mtzB);  
-    mtzD = AlocarDinamicamente(arq[3], argv, mtzD);
+    *matrizes[0] = AlocarDinamicamente(arq[0], argv, *matrizes[0]);
+    *matrizes[1] = AlocarDinamicamente(arq[1], argv, *matrizes[1]);  
+    *matrizes[3] = AlocarDinamicamente(arq[3], argv, *matrizes[3]);
     
     //passo 2 : soma das matrizes A e B
-    somaMatriz(mtzA, mtzB, mtzD);
+    for (int i = 0; i < qntThreads; i++){
+        rc = pthread_create(&outrosId[i], NULL, treadProcessamento, (void *)&matrizes[i]);
+    } 
     //T threads do tipo processamento
     
     //passo 3: Gravacao da martriz D
-    gravaMatriz(arq[3], mtzD);
+    gravaMatriz(arq[3], *matrizes[3]);
     //1 thread do tipo escrita e 1 thread do tipo leitura
 
     //passo 4 : Leitura da matriz C
-    mtzC = AlocarDinamicamente(arq[2], argv, mtzC);
+    *matrizes[2] = AlocarDinamicamente(arq[2], argv, *matrizes[2]);
     //1 thread do tipo escrita e 1 thread do tipo leitura
     
     //passo 5 : multiplicacao das matrizes C e D
-    mtzE = AlocarDinamicamente(arq[4], argv, mtzE);
-    multiplicaMatriz(mtzC, mtzD, mtzE);
+    *matrizes[4] = AlocarDinamicamente(arq[4], argv, *matrizes[4]);
+    multiplicaMatriz(*matrizes);
     //T threads do tipo processamento
     
     //passo 6 : gravacao da matriz E
-    gravaMatriz(arq[4], mtzE);
+    gravaMatriz(arq[4], *matrizes[4]);
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
     //passo 7 : Reducao da matriz E e saida do valo na tela
-    reducao = reduzMatriz(mtzE);
+    reducao = reduzMatriz(matrizes[4]);
     //1 thread do tipo escrita e 1 thread do tipo processamento
 
     //saidas
@@ -147,11 +159,9 @@ int main(int argc, char *argv[]) {
 
     //liberação de memória
     FecharArquivo(arq, nArq);
-    free(mtzA.matriz);
-    free(mtzB.matriz);
-    free(mtzC.matriz);
-    free(mtzD.matriz);
-    free(mtzE.matriz);
+    for (int i = 0; i < 5; i++){
+        free(matrizes[i]->matriz);
+    }
 
     return 0;
 }
